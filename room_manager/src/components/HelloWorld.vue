@@ -5,19 +5,21 @@
       <li v-for="room in rooms" :key="room.id" class="room-item">
         <span class="room-name">{{ room.name }}</span> - Capacity: <span class="room-capacity">{{ room.capacity }}</span>
         <button @click="showReservations(room.id)">Show Reservations</button>
-        <button @click="reserveRoom(room.id)">Reserve Room</button> <!-- Neuer Button für Reservierung -->
+        <button @click="reserveRoom(room)">Reserve Room</button>
       </li>
     </ul>
 
     <div v-if="selectedRoom !== null">
       <h2>Reservations for {{ selectedRoom.name }}</h2>
       <ul>
+        <li v-if="reservations.length === 0">None</li>
         <li v-for="reservation in reservations" :key="reservation.room_id + reservation.user">
           {{ reservation.user }}
         </li>
       </ul>
       <input type="text" v-model="newReservationUser" placeholder="Enter your name">
-      <button @click="reserveRoom(selectedRoom.id, newReservationUser)">Reserve Room</button> <!-- Neuer Button für Reservierung -->
+      <button @click="confirmReservation">Reserve Room</button>
+      <button @click="listReservations">List Reservations</button>
     </div>
   </div>
 </template>
@@ -34,7 +36,7 @@ export default {
     }
   },
   mounted() {
-    this.fetchRooms()
+    this.fetchRooms();
   },
   methods: {
     async fetchRooms() {
@@ -60,24 +62,50 @@ export default {
         console.error('Error:', error);
       }
     },
-    async reserveRoom(roomId) {
+    async reserveRoom(room) {
       try {
         const user = prompt("Enter your name:");
         if (!user) return; // User canceled
-        const response = await fetch(`http://localhost:8000/rooms/${roomId}/reserve`, {
+
+        const payload = {
+          room_id: room.id,
+          user: user
+        };
+
+        const response = await fetch(`http://localhost:8000/rooms/${room.id}/reserve`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ user })
+          body: JSON.stringify(payload)
         });
+
         if (!response.ok) {
           throw new Error('Failed to reserve room');
         }
-        this.showReservations(roomId);
+
+        this.showReservations(room.id);
       } catch (error) {
         console.error('Error:', error);
       }
+    },
+    async listReservations() {
+      try {
+        const response = await fetch('http://localhost:8000/reservations');
+        if (!response.ok) {
+          throw new Error('Failed to fetch reservations');
+        }
+        this.reservations = await response.json();
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    },
+    confirmReservation() {
+      if (!this.newReservationUser) {
+        alert("Please enter your name before reserving a room.");
+        return;
+      }
+      this.reserveRoom(this.selectedRoom);
     }
   }
 }

@@ -3,8 +3,9 @@
     <h1 class="title">School Room Management</h1>
     <ul class="room-list">
       <li v-for="room in rooms" :key="room.id" class="room-item">
-        <span class="room-name">{{ room.name }}</span> - 
+        <span class="room-name">{{ room.name }}</span> - Capacity: <span class="room-capacity">{{ room.capacity }}</span>
         <button @click="showReservations(room.id)">Show Reservations</button>
+        <button @click="reserveRoom(room)">Reserve Room</button>
       </li>
     </ul>
 
@@ -14,13 +15,11 @@
         <li v-if="reservations.length === 0">None</li>
         <li v-for="reservation in reservations" :key="reservation.room_id + reservation.user">
           {{ reservation.user }}
-          {{ reservation.time }}  
-          <!--<button @click="removeReservation(room.id)">Remove</button>-->
         </li>
       </ul>
       <input type="text" v-model="newReservationUser" placeholder="Enter your name">
-      <input type="datetime-local" v-model="newReservationTime">
-      <button @click="reserveRoom(selectedRoom.id,newReservationUser,newReservationTime)">Reserve Room</button>
+      <button @click="confirmReservation">Reserve Room</button>
+      <button @click="listReservations">List Reservations</button>
     </div>
   </div>
 </template>
@@ -33,8 +32,7 @@ export default {
       rooms: [],
       reservations: [],
       selectedRoom: null,
-      newReservationUser: '',
-      newReservationTime: ''
+      newReservationUser: ''
     }
   },
   mounted() {
@@ -64,24 +62,12 @@ export default {
         console.error('Error:', error);
       }
     },
-    async removeReservation(roomId) {
+    async reserveRoom(room) {
       try {
-        const response = await fetch(`http://localhost:8000/rooms/${roomId}/reservations`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch reservations');
-        }
-        this.reservations = await response.json();
-        this.selectedRoom = this.rooms.find(room => room.id === roomId);
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    },
-    async reserveRoom(room,user,time) {
-      console.log(time)
-      console.log(user)
-      console.log(room)
-      try {
-        const response = await fetch(`http://localhost:8000/rooms/${room}/reserve?user=${user}&time=${time}`, {
+        const user = prompt("Enter your name:");
+        if (!user) return;
+
+        const response = await fetch(`http://localhost:8000/rooms/${room.id}/reserve?user=${user}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -92,7 +78,7 @@ export default {
           throw new Error('Failed to reserve room');
         }
 
-        this.showReservations(room);
+        this.showReservations(room.id);
       } catch (error) {
         console.error('Error:', error);
       }
@@ -107,6 +93,13 @@ export default {
       } catch (error) {
         console.error('Error:', error);
       }
+    },
+    confirmReservation() {
+      if (!this.newReservationUser) {
+        alert("Please enter your name before reserving a room.");
+        return;
+      }
+      this.reserveRoom(this.selectedRoom);
     }
   }
 }

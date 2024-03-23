@@ -2,15 +2,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+from datetime import datetime
 
 app = FastAPI()
 
-# CORS-Konfiguration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8080"],
     allow_credentials=True,
-    allow_methods=["*"],  # POST hinzugefügt für Reservierungen
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -22,6 +22,7 @@ class Room(BaseModel):
 class Reservation(BaseModel):
     room_id: int
     user: str
+    time: datetime  # Add a field for the reservation time
 
 # Testdaten für die Räume der HTL-Weiz
 rooms = [
@@ -40,9 +41,15 @@ async def get_rooms():
 async def get_reservations(room_id: int):
     return [r for r in reservations if r.room_id == room_id]
 
+@app.get("/reservations", response_model=List[Reservation])
+async def list_reservations():
+    return reservations
+
 @app.post("/rooms/{room_id}/reserve", response_model=Reservation)
-async def reserve_room(room_id: int, user: str):
+async def reserve_room(room_id: int, user: str, time: str):
     # Check if the room exists
+    time= datetime.strptime(time, '%Y-%m-%dT%H:%M')
+
     room = next((r for r in rooms if r.id == room_id), None)
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -51,8 +58,7 @@ async def reserve_room(room_id: int, user: str):
     if len([r for r in reservations if r.room_id == room_id]) >= room.capacity:
         raise HTTPException(status_code=400, detail="Room is full")
 
-    # Create and append the reservation
-    reservation = Reservation(room_id=room_id, user=user)
+    # Create and append the reservation with current time
+    reservation = Reservation(room_id=room_id, user=user, time=time)
     reservations.append(reservation)
     return reservation
-

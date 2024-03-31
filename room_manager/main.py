@@ -62,3 +62,7 @@ async def reserve_room(room_id: int, user: str, time: str):
     reservation = Reservation(room_id=room_id, user=user, time=time)
     reservations.append(reservation)
     return reservation
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
